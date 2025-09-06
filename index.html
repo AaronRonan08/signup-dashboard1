@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signup Dashboard App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      transition: background 0.5s ease;
+    }
+    h2 {
+      color: #222;
+    }
+    form, table {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+    }
+    input {
+      margin: 6px 0;
+      padding: 10px;
+      width: 96%;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+    }
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    #signupBtn {
+      background: #28a745;
+      color: white;
+    }
+    #colorToggleBtn {
+      background: #007bff;
+      color: white;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #bbb;
+      text-align: center;
+      padding: 10px;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    .deleteBtn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>User Signup Form</h2>
+
+  <button id="colorToggleBtn">Toggle Background Color</button>
+
+  <form id="signupForm">
+    <input type="text" id="username" placeholder="Username" required><br>
+    <input type="email" id="email" placeholder="Email" required><br>
+    <input type="password" id="password" placeholder="Password (min 6 chars)" required><br>
+    <button type="submit" id="signupBtn">Signup</button>
+  </form>
+
+  <h2>Dashboard</h2>
+  <table id="userTable">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Password (Hashed)</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const signupForm = document.getElementById('signupForm');
+    const userTableBody = document.querySelector('#userTable tbody');
+    const colorToggleBtn = document.getElementById('colorToggleBtn');
+    const colors = ['#f4f4f4','#ffe5b4','#d4edda','#cce5ff','#f8d7da'];
+    let currentColor = 0;
+
+    colorToggleBtn.addEventListener('click', () => {
+      currentColor = (currentColor + 1) % colors.length;
+      document.body.style.background = colors[currentColor];
+    });
+
+    async function hashPassword(password) {
+      const msgBuffer = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+
+    async function saveUser(username, email, password) {
+      const hashedPassword = await hashPassword(password);
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      users.push({username, email, password: hashedPassword});
+      localStorage.setItem('users', JSON.stringify(users));
+      loadUsers();
+    }
+
+    function loadUsers() {
+      userTableBody.innerHTML = '';
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      users.forEach((user,index) => {
+        const row = `<tr>
+          <td>${user.username}</td>
+          <td>${user.email}</td>
+          <td>${user.password}</td>
+          <td><button class='deleteBtn' onclick='deleteUser(${index})'>Delete</button></td>
+        </tr>`;
+        userTableBody.innerHTML += row;
+      });
+    }
+
+    function deleteUser(index) {
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+      users.splice(index,1);
+      localStorage.setItem('users', JSON.stringify(users));
+      loadUsers();
+    }
+    window.deleteUser = deleteUser;
+
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if(!username){alert('Username cannot be empty');return;}
+      if(!emailRegex.test(email)){alert('Invalid email');return;}
+      if(password.length<6){alert('Password min 6 chars');return;}
+
+      await saveUser(username,email,password);
+      signupForm.reset();
+    });
+
+    window.onload = loadUsers;
+  </script>
+
+</body>
+</html>
